@@ -6,9 +6,10 @@ import {name as appName} from './package.json'
 
 const rootPath = (nPath) => path.resolve(__dirname, nPath)
 
-const {NODE_ENV} = process.env
+const {NODE_ENV = 'development'} = process.env
 const IS_PROD = NODE_ENV === 'production'
 const IS_TEST = NODE_ENV === 'test'
+const IS_DEV = NODE_ENV === 'development'
 const SRC_PATH = rootPath('src')
 const DIST_PATH = rootPath('dist')
 
@@ -36,8 +37,9 @@ export default {
 
   output: {
     path: DIST_PATH,
-    filename: IS_PROD ? '[name]-[chunkhash].js' : '[name]'
+    filename: IS_PROD ? '[name]-[chunkhash].js' : '[name].js'
   },
+
 
   module: {
     rules: [{
@@ -45,14 +47,14 @@ export default {
       loader: 'babel-loader',
       include: SRC_PATH,
       query: {
-        // sourceMap: !IS_PROD,
+        sourceMap: !IS_PROD,
         cacheDirectory: true,
-        // compact: IS_PROD
+        compact: IS_PROD
       }
     }, {
       test: /\.s?css/,
       include: SRC_PATH,
-      loader: [
+      use: [
         ...(IS_PROD ? [MiniCssExtractPlugin.loader, 'css-loader'] : ['style-loader']),
         'postcss-loader',
         'sass-loader'
@@ -61,17 +63,24 @@ export default {
       test: /\.pug/,
       include: SRC_PATH,
       use: [{
-        loader: 'virtual-jade-loader',
+        loader: 'svelte-loader',
         options: {
-          runtime: `var h = require('hyperapp').h;`,
+          emitCss: true,
+          hotReload: IS_DEV,
+          preprocess: {
+            markup({content, ...rest}) {
+              return {code: content}
+            }
+          }
         }
-      }]
+      }, 'pug-html-loader']
     }]
   },
 
   plugins: PLUGINS,
 
   resolve: {
+    mainFields: ['svelte', 'browser', 'module', 'main'],
     modules: [SRC_PATH, rootPath('node_modules')]
   },
 

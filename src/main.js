@@ -1,14 +1,12 @@
-import {app} from 'hyperapp'
+import App from './app.pug'
 
-import template from './main.pug'
+const app = new App({
+  target: document.body,
+  data: {name: 'world'}
+})
 
-const state = {
-  count: 0
-}
+// change the data associated with the template
+setTimeout(() => {
+  app.set({name: 'everybody'})
+}, 5000)
 
-const actions = {
-  down: value => state => ({ count: state.count - value }),
-  up: value => state => ({ count: state.count + value })
-}
-
-app(state, actions, template, document.body)
