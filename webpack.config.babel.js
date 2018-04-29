@@ -1,6 +1,12 @@
 import path from 'path'
+import pug from 'pug'
+import sass from 'node-sass'
+import {optimize} from 'webpack'
 import MiniCssExtractPlugin from 'mini-css-extract-plugin'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
+import S3Plugin from 'webpack-s3-plugin'
+import OptimizeCSSAssetsPlugin from 'optimize-css-assets-webpack-plugin'
+import UglifyJsPlugin from 'uglifyjs-webpack-plugin'
 
 import {name as appName} from './package.json'
 
@@ -62,18 +68,46 @@ export default {
     }, {
       test: /\.pug/,
       include: SRC_PATH,
-      use: [{
-        loader: 'svelte-loader',
-        options: {
-          emitCss: true,
-          hotReload: IS_DEV,
-          preprocess: {
-            markup({content, ...rest}) {
-              return {code: content}
-            }
+      loader: 'svelte-loader',
+      options: {
+        hotReload: IS_DEV,
+        preprocess: {
+          markup({content, ...rest}) {
+            return {code: pug.render(content)}
+          },
+
+          style({content, attributes, filename}) {
+            return new Promise((resolve, reject) => {
+              sass.render({
+                data: content,
+                includePaths: ['src'],
+                sourceMap: true,
+                outFile: 'x', // this is necessary, but is ignored
+                importer(url, prev) {
+                  if (/^~.*/.test(url)) {
+                    const filePath = url.replace(/^~/, '')
+                    const nodeModulePath = `./node_modules/${filePath}`
+
+                    return {file: path.resolve(nodeModulePath)}
+                  } else {
+                    const relativeFilePath = filename.replace(new RegExp('[^\\/]+$'), '')
+
+                    console.log(path.resolve(relativeFilePath, url))
+                    return {file: path.resolve(relativeFilePath, url)}
+                  }
+                }
+              }, (err, result) => {
+                if (err) return reject(err)
+
+                resolve({
+                  code: result.css,
+                  map: result.map
+                })
+              })
+            })
           }
         }
-      }, 'pug-html-loader']
+      }
     }]
   },
 
@@ -82,6 +116,20 @@ export default {
   resolve: {
     mainFields: ['svelte', 'browser', 'module', 'main'],
     modules: [SRC_PATH, rootPath('node_modules')]
+  },
+  
+  optimization: {
+    minimizer: [
+      new UglifyJsPlugin({
+        cache: true,
+        parallel: true,
+        sourceMap: IS_PROD,
+        uglifyOptions: {
+          mangle: true
+        }
+      }),
+      new OptimizeCSSAssetsPlugin({})
+    ]
   },
 
   devServer: {
