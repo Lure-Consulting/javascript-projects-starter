@@ -1,3 +1,5 @@
+import 'styles/global.scss'
+
 import App from './app.pug'
 
 const app = new App({

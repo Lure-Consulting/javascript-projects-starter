@@ -19,16 +19,14 @@ const IS_DEV = NODE_ENV === 'development'
 const SRC_PATH = rootPath('src')
 const DIST_PATH = rootPath('dist')
 
-const PLUGINS = []
+const PLUGINS = [
+  new MiniCssExtractPlugin({
+    filename: '[name].css',
+    chunkFilename: '[name]-[chunkhash].css'
+  })
+]
 
-if (IS_PROD) {
-  PLUGINS.push(
-    new MiniCssExtractPlugin({
-      filename: '[name].css',
-      chunkFilename: '[name]-[chunkhash].css'
-    })
-  )
-} else if (!IS_TEST) {
+if (!IS_TEST) {
   PLUGINS.push(
     new HtmlWebpackPlugin({
       inject: true,
@@ -61,7 +59,7 @@ export default {
       test: /\.s?css/,
       include: SRC_PATH,
       use: [
-        ...(IS_PROD ? MiniCssExtractPlugin.loader : 'style-loader'),
+        MiniCssExtractPlugin.loader,
         {loader: 'css-loader', options: {importLoaders: 2}},
         'postcss-loader',
         'sass-loader'
@@ -133,7 +131,7 @@ export default {
     ],
 
     splitChunks: {
-      cacheGroups: !IS_PROD ? false : {
+      cacheGroups: {
         styles: {
           name: 'styles',
           test: /\.s?css$/,
