@@ -61,7 +61,8 @@ export default {
       test: /\.s?css/,
       include: SRC_PATH,
       use: [
-        ...(IS_PROD ? [MiniCssExtractPlugin.loader, 'css-loader'] : ['style-loader']),
+        ...(IS_PROD ? MiniCssExtractPlugin.loader : 'style-loader'),
+        {loader: 'css-loader', options: {importLoaders: 2}},
         'postcss-loader',
         'sass-loader'
       ]
@@ -117,7 +118,7 @@ export default {
     mainFields: ['svelte', 'browser', 'module', 'main'],
     modules: [SRC_PATH, rootPath('node_modules')]
   },
-  
+
   optimization: {
     minimizer: [
       new UglifyJsPlugin({
@@ -129,7 +130,24 @@ export default {
         }
       }),
       new OptimizeCSSAssetsPlugin({})
-    ]
+    ],
+
+    splitChunks: {
+      cacheGroups: !IS_PROD ? false : {
+        styles: {
+          name: 'styles',
+          test: /\.s?css$/,
+          chunks: 'all',
+          enforce: true
+        },
+
+        common: {
+          name: 'common',
+          chunks: 'initial',
+          minChunks: 2
+        }
+      }
+    }
   },
 
   devServer: {
